@@ -6,7 +6,6 @@ import numpy as np
 import contextlib
 import wave
 from cffi import FFI
-from vadwebrtc import vadTest
 
 from omegaconf import OmegaConf
 import torch
@@ -25,8 +24,6 @@ def read_wave(path):
         return pcm_data
 
 pcm_data = read_wave('librispeech/367-130732-0000.wav')
-pcm_data = vadTest(1, pcm_data)
-
 args = OmegaConf.load("librispeech/conf.yml")
 model = Speech2Text(args)
 checkpoint_avg = torch.load('librispeech/model', map_location='cpu')
@@ -43,7 +40,6 @@ C = ffi.dlopen('./libkaldi-feature.so')
 
 
 pcm_data = ffi.new("char[]", pcm_data)
-
 
 start = time.clock()
 
