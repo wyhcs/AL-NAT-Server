@@ -5,7 +5,6 @@ import numpy as np
 import contextlib
 import wave
 from cffi import FFI
-from vadwebrtc import vadTest
 
 from omegaconf import OmegaConf
 import torch
@@ -25,7 +24,6 @@ def read_wave(path):
 
 
 pcm_data = read_wave('aishell/BAC009S0764W0121.wav')
-pcm_data = vadTest(1, pcm_data)
 
 args = OmegaConf.load("aishell/conf.yml")
 model = Speech2Text(args)
@@ -42,7 +40,6 @@ ffi.cdef("""
 C = ffi.dlopen('./libkaldi-feature.so')
 
 pcm_data = ffi.new("char[]", pcm_data)
-
 result = C.fbank_feats_cmvn(len(pcm_data), pcm_data, 'aishell/cmvn.ark'.encode('ascii'), 'aishell/fbank.conf'.encode('ascii'))
 
 cols = int(result[0])
