@@ -1,64 +1,37 @@
-import time
-import os
-import re
-import copy
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+
+import warnings
+warnings.filterwarnings("ignore")
+
+import pathlib
 import numpy as np
-import contextlib
-import wave
-from cffi import FFI
 
 from omegaconf import OmegaConf
-import torch
 from models.seq2seq.speech2text import Speech2Text
 from models.torch_utils import pad_list
 
-def read_wave(path):
-    with contextlib.closing(wave.open(path, 'rb')) as wf:
-        num_channels = wf.getnchannels()
-        assert num_channels == 1
-        sample_width = wf.getsampwidth()
-        assert sample_width == 2
-        sample_rate = wf.getframerate()
-        assert sample_rate in (8000, 16000, 32000, 48000)
-        pcm_data = wf.readframes(wf.getnframes())
-        return pcm_data
+import torch
+import torchaudio
 
-pcm_data = read_wave('librispeech/367-130732-0000.wav')
-args = OmegaConf.load("librispeech/conf.yml")
+model_path = str(pathlib.Path(__file__).parent)
+
+args = OmegaConf.load(model_path + "/librispeech/conf.yml")
+args.dict = model_path + '/librispeech/dict.txt'
+args.wp_model = model_path + '/librispeech/wp.model'
+args.kenlm_path = model_path + '/librispeech/3-gram.klm'
+
 model = Speech2Text(args)
-checkpoint_avg = torch.load('librispeech/model', map_location='cpu')
-model.load_state_dict(checkpoint_avg['model_state_dict'])
+checkpoint = torch.load(model_path + '/librispeech/model', map_location='cpu')
+model.load_state_dict(checkpoint)
 
 model = model.cuda()
 model.eval()
 
-ffi = FFI()
-ffi.cdef("""
-    const double *fbank_feats_cmvn(int length, char* arg, char* cmvn_path, char* conf_path);
-""")
-C = ffi.dlopen('./libkaldi-feature.so')
 
+sound, sample_rate = torchaudio.load(model_path + '/librispeech/61-70968-0000.wav')
+feat = torchaudio.compliance.kaldi.fbank(sound, num_mel_bins=80, window_type='hamming').numpy()
+feat = (feat - feat.mean(axis=1)[:, np.newaxis]) / (feat.std(axis=1) + 1e-16)[:, np.newaxis]
 
-pcm_data = ffi.new("char[]", pcm_data)
-
-start = time.clock()
-
-result = C.fbank_feats_cmvn(len(pcm_data), pcm_data, 'librispeech/cmvn.ark'.encode('ascii'), 'librispeech/fbank.conf'.encode('ascii'))
-
-cols = int(result[0])
-rows = int(result[1])
-feat = np.zeros(cols*rows)
-for c in range(cols*rows):
-    feat[c] = result[c+2]
-feat = [feat.reshape(cols, rows)]
-
-i = 1
-for x in range(1):
-    librispeech = model.decode(feat, args)
-    print(librispeech)
-    i += 1
-    print(i)
-
-end = time.clock()
-t=end-start
-print("Runtime is ：",t)
+librispeech = model.decode([feat], args)
+print(librispeech)
