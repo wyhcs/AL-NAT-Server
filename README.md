@@ -1,6 +1,6 @@
 # AL-NAT-Server
 
-Asr service of ICASSP2022 paper: Alignment-Learning based single-step decoding for Accurate and fast Non-autoregressive Speech Recognition
+Asr service of paper: Accurate and Fast Lightweight End-to-End Speech Recognition Model based on Non-Autoregressive and Knowledge Distillation
 
 
 Download model from: https://drive.google.com/drive/folders/1WhzB_TgAQOUKR2hWRNWmB0bD0DAfALK4
